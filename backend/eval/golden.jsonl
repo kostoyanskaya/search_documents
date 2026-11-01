@@ -1,0 +1,21 @@
+{"id":"ru-term","question":"Какой срок действия договора поставки?","lang":"ru","docs":["ru_contract.docx"],"contains":["12 месяцев"],"kind":"text"}
+{"id":"ru-pay","question":"В течение скольких дней покупатель должен оплатить товар?","lang":"ru","docs":["ru_contract.docx"],"contains":["30"],"kind":"text"}
+{"id":"ru-penalty","question":"Какая неустойка за просрочку платежа?","lang":"ru","docs":["ru_contract.docx"],"contains":["0,1"],"kind":"text"}
+{"id":"ru-court","question":"Где рассматриваются споры по договору?","lang":"ru","docs":["ru_contract.docx"],"contains":["Арбитражн"],"kind":"text"}
+{"id":"en-term","question":"How long is the lease term?","lang":"en","docs":["en_lease.docx"],"contains":["24"],"kind":"text"}
+{"id":"en-rent","question":"What is the monthly rent?","lang":"en","docs":["en_lease.docx"],"contains":["3,400","3400"],"kind":"text"}
+{"id":"en-notice","question":"How much notice is needed to terminate the lease?","lang":"en","docs":["en_lease.docx"],"contains":["60"],"kind":"text"}
+{"id":"en-pets","question":"Are pets allowed?","lang":"en","docs":["en_lease.docx"],"contains":["consent","not"],"kind":"text"}
+{"id":"x-en-ru-term","question":"What is the term of the supply contract?","lang":"en","docs":["ru_contract.docx"],"contains":["12"],"cross_lingual":true,"kind":"text"}
+{"id":"x-en-ru-penalty","question":"What penalty applies for late payment under the supply agreement?","lang":"en","docs":["ru_contract.docx"],"contains":["0.1","0,1"],"cross_lingual":true,"kind":"text"}
+{"id":"x-ru-en-rent","question":"Какова ежемесячная арендная плата по договору аренды?","lang":"ru","docs":["en_lease.docx"],"contains":["3 400","3,400","3400"],"cross_lingual":true,"kind":"text"}
+{"id":"x-ru-en-deposit","question":"Какой залог требуется по договору аренды?","lang":"ru","docs":["en_lease.docx"],"contains":["6 800","6,800","6800"],"cross_lingual":true,"kind":"text"}
+{"id":"pdf-ru-revenue","question":"Какая выручка указана в годовом отчёте за 2023 год?","lang":"ru","docs":["mixed_report.pdf"],"contains":["4 800 000"],"kind":"text"}
+{"id":"pdf-en-staff","question":"How many people does Vector Corp employ?","lang":"en","docs":["mixed_report.pdf"],"contains":["310"],"kind":"text"}
+{"id":"sql-ru-total","question":"Какая общая выручка по Москве?","lang":"ru","docs":["ru_sales.csv"],"contains":["1 245 000,25","1245000,25","1245000.25"],"kind":"sql"}
+{"id":"sql-ru-top","question":"В каком городе наибольшая суммарная выручка?","lang":"ru","docs":["ru_sales.csv"],"contains":["Москва"],"kind":"sql"}
+{"id":"sql-en-avg","question":"What is the average salary in Engineering?","lang":"en","docs":["en_employees.xlsx"],"contains":["5000","5 000","5,000"],"kind":"sql"}
+{"id":"sql-en-count","question":"How many employees are in Sales?","lang":"en","docs":["en_employees.xlsx"],"contains":["2"],"kind":"sql"}
+{"id":"none-ru-1","question":"Какая погода будет завтра в Париже?","lang":"ru","docs":[],"answerable":false,"kind":"text"}
+{"id":"none-en-1","question":"Who won the 2018 football world cup?","lang":"en","docs":[],"answerable":false,"kind":"text"}
+{"id":"none-en-2","question":"What is the CEO's home address?","lang":"en","docs":[],"answerable":false,"kind":"text"}

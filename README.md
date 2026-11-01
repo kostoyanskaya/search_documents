@@ -1,221 +1,140 @@
-# DocMind — AI Document Search Agent
+# DocMind
 
-DocMind is a full-featured RAG (Retrieval-Augmented Generation) application that helps users find the right document based on their queries or input data. The agent retrieves the most relevant excerpts, passes them to an LLM as grounded context, and returns a response along with precise citations from the sources it relies on—rather than letting the model guess or fabricate information. For example, DocMind allows users to upload up to 50 documents at once. The system will automatically find the relevant document among them, display its title, pinpoint exactly where the requested information is located within it, and provide a clear answer with the source attribution.
+Поиск по документам с помощью ИИ. Загружаешь файлы, задаёшь вопрос обычным языком и получаешь ответ, который опирается на эти файлы: в каком документе нашлось, на какой странице или в каких строках, и с цитатой из текста. Если вопрос про таблицу (средняя зарплата, сумма за год), считает точно, через SQL, и показывает сам запрос.
 
+Работает с русскими и английскими документами, в том числе вперемешку: можно спросить по-английски про русский договор. Ответ приходит на языке вопроса.
 
-![DocMind screenshot](docs/screenshot.png)
+![DocMind](docs/screenshot.png)
 
-## What it does
+## Что умеет
 
-1. A user uploads one or more documents (`.pdf`, `.docx`, `.csv`, `.xlsx`, `.xls`).
-2. The backend extracts the text, splits it into chunks, and embeds each chunk into a
-   vector store.
-3. The user types a question in plain language.
-4. The backend retrieves the most semantically relevant chunks, passes them to an LLM
-   with strict "answer only from this context" instructions, and returns a grounded
-   answer.
-5. Every answer is shown together with the source documents and excerpts it came from,
-   so the user can verify it.
+- принимает PDF, DOCX, XLSX, XLS и CSV, до 50 файлов за раз;
+- читает сканы PDF через OCR (Tesseract, русский и английский);
+- ищет по смыслу и по словам одновременно, потом перепроверяет найденное;
+- показывает источник: документ, место в нём и цитату, которую сервер сам сверяет с текстом;
+- считает по таблицам точно, а не «примерно» языковой моделью;
+- не придумывает: если ответа в файлах нет, так и пишет.
 
-Each user only ever sees their own documents — data belonging to different users is
-fully isolated, and nothing is ever written to disk (see [Privacy & Security](#privacy--security)
-below).
+## Как это устроено
 
-## Tech stack
+```mermaid
+flowchart LR
+  Q([Вопрос]) --> T{Про что вопрос?}
 
-**Backend**
-- [FastAPI](https://fastapi.tiangolo.com/) — async Python web framework
-- [LangChain](https://www.langchain.com/) + [LangGraph](https://www.langchain.com/langgraph) — RAG pipeline orchestration (retrieve → generate graph)
-- [ChromaDB](https://www.trychroma.com/) (ephemeral, in-memory client) — vector store
-- [Sentence-Transformers](https://www.sbert.net/) (`intfloat/multilingual-e5-small`) — local, multilingual text embeddings
-- DeepSeek / OpenAI-compatible Chat Completions API (via `langchain-openai`) — answer generation
-- `pypdf`, `python-docx`, `pandas` + `openpyxl` — text extraction from PDF / DOCX / CSV / XLSX
-- Pydantic + `pydantic-settings` — request/response validation and configuration
+  T -->|про текст| S[Поиск по документам]
+  S --> R[Отбор лучших фрагментов]
+  R --> A[Ответ LLM]
+  A --> C[Проверка цитат]
+  C --> OUT([Ответ с источниками])
 
-**Frontend**
-- [React 18](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
-- [Vite](https://vitejs.dev/) — dev server and build tool
-- Plain CSS (no UI framework) — custom design system
-- `fetch` API with cookie-based session auth
+  T -->|подсчёт по таблице| SQL[SQL-запрос]
+  SQL --> A2[Ответ по результату]
+  A2 --> OUT
 
-## Architecture highlights
-
-- **No accounts, no persistent storage.** Each browser gets an anonymous, unguessable
-  session identifier in an `httpOnly` cookie. All documents, extracted text, and vector
-  embeddings live only in the backend process's memory and are scoped to that session
-  ID — they are never written to disk.
-- **Automatic cleanup.** A background task purges any session that has been idle longer
-  than a configurable TTL. Users can also wipe their own data instantly via a
-  "Clear my data" button.
-- **Non-blocking under concurrent users.** File processing and LLM calls run in a
-  thread pool so that one user's request never blocks another user's request on the
-  same server process.
-
-## Project structure
-
-```
-search_documents/
-├── backend/
-│   ├── app/
-│   │   ├── main.py              # FastAPI app, CORS, background cleanup task
-│   │   ├── core/
-│   │   │   ├── config.py        # environment-based settings
-│   │   │   └── session.py       # anonymous session cookie + TTL cleanup
-│   │   ├── models/
-│   │   │   └── schemas.py       # Pydantic request/response models
-│   │   ├── services/
-│   │   │   ├── document_registry.py  # in-memory document metadata store
-│   │   │   ├── file_processing.py    # text extraction (PDF/DOCX/CSV/XLSX)
-│   │   │   ├── vector_store.py       # ChromaDB (ephemeral) indexing & search
-│   │   │   ├── llm.py                # LLM client factory
-│   │   │   └── rag_agent.py          # LangGraph retrieve → generate pipeline
-│   │   └── routers/
-│   │       ├── documents.py     # upload / list / delete documents
-│   │       ├── query.py         # ask a question
-│   │       └── session.py       # clear all data for the current session
-│   ├── requirements.txt
-│   └── .env.example
-└── frontend/
-    ├── src/
-    │   ├── api/client.ts         # typed fetch wrapper for the backend API
-    │   ├── components/           # Icon, Sidebar, Workspace, AnswerModal, ...
-    │   ├── hooks/                # useSimulatedProgress
-    │   ├── types/                # shared TypeScript types
-    │   └── App.tsx
-    ├── package.json
-    └── .env.example
+  R -->|ничего не нашли| N[Другие формулировки]
+  C -->|цитата не подтвердилась| N
+  N --> S
 ```
 
-## Prerequisites
+Коротко по шагам:
 
-- Python 3.10+
-- Node.js 18+ and npm
-- An API key for a Chat Completions-compatible LLM provider (DeepSeek or OpenAI)
+1. **Загрузка.** Файл читается в отдельном изолированном процессе с лимитом по времени и памяти, чтобы битый или вредный файл не мог повесить сервер. Текст режется на фрагменты (сплиттер из LangChain), у фрагментов из таблиц сохраняется строка заголовка.
+2. **Индекс.** Для каждого фрагмента считается эмбеддинг, он хранится в ChromaDB (в памяти, без записи на диск). Рядом строится словесный индекс (BM25 с учётом русской и английской морфологии).
+3. **Поиск.** Смысловой поиск в ChromaDB и словесный по BM25 объединяются (RRF), потом кросс-энкодер переоценивает лучшие фрагменты. Если вопрос на другом языке, чем документы, запрос переводится.
+4. **Ответ.** В LLM уходят только найденные фрагменты и строгая инструкция отвечать по ним. Модель возвращает JSON с ответом и ссылками на фрагменты.
+5. **Проверка.** Сервер смотрит, что цитата действительно есть в указанном фрагменте. Нет цитаты, значит, ответ не показывается, а поиск повторяется.
+6. **Таблицы.** Для вопросов вида «сколько», «в среднем», «по месяцам» модель пишет один SELECT, он выполняется в DuckDB в песочнице (без доступа к файлам и сети), результат объясняется словами.
 
-## Getting started
+Каждый шаг агента виден в интерфейсе («Как это найдено») и приходит по ходу работы через Server-Sent Events.
 
-### 1. Clone the repository
+## Технологии
+
+**Бэкенд:** Python 3.11+, FastAPI, LangGraph, LangChain (разбиение текста, интеграция с Chroma), ChromaDB, sentence-transformers, DuckDB, pypdf / pypdfium2, python-docx, openpyxl, Tesseract.
+
+**Модели:** эмбеддинги `intfloat/multilingual-e5-small`, реранкер `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`, ответы генерирует любая OpenAI-совместимая LLM (по умолчанию DeepSeek).
+
+**Фронтенд:** React 18, TypeScript, Vite, обычный CSS, интерфейс на русском и английском.
+
+**Деплой:** Docker Compose, Caddy (HTTPS, заголовки безопасности).
+
+## Запуск
+
+Нужны Python 3.11+ (проверено на 3.12), Node.js 18+ и ключ к LLM.
 
 ```bash
-git clone <your-repo-url>
-cd search_documents
+# бэкенд
+cd backend
+python -m venv .venv
+.venv\Scripts\activate          # Linux / macOS: source .venv/bin/activate
+pip install -r requirements.txt -c constraints.txt
+cp .env.example .env            # впишите LLM_API_KEY
+uvicorn app.main:app --port 8000 --workers 1
+
+# фронтенд, в другом терминале
+cd frontend
+npm ci
+npm run dev                     # http://localhost:5173
 ```
 
-### 2. Backend setup
+При первом запуске скачиваются модели (около 1 ГБ), для этого нужен интернет. Дальше они грузятся из локального кэша. Для OCR должен стоять Tesseract с русским языком (`tesseract-ocr-rus`), без него сканы просто не распознаются.
+
+Через Docker:
+
+```bash
+cp backend/.env.example backend/.env
+SITE_ADDRESS=localhost docker compose up -d --build
+```
+
+Модели скачиваются при сборке образа, а в контейнере работают без интернета. Поэтому модель эмбеддингов в `backend/.env` должна совпадать с `ARG EMBEDDING_MODEL` в `backend/Dockerfile` (или передайте её при сборке: `docker compose build --build-arg EMBEDDING_MODEL=...`).
+
+## Настройки (`backend/.env`)
+
+| Переменная | Что делает | В `.env.example` |
+|---|---|---|
+| `LLM_API_KEY` | ключ к LLM | обязательно |
+| `LLM_BASE_URL`, `LLM_MODEL` | адрес и модель | DeepSeek |
+| `EMBEDDING_MODEL` | модель эмбеддингов (`-base` и `bge-m3` точнее, но медленнее) | e5-small |
+| `RERANKER_MODEL` | реранкер, пусто отключает | mmarco (лёгкий) |
+| `OCR_ENABLED` | распознавание сканов | `true` |
+| `MAX_UPLOAD_MB` | размер одного файла | `200` |
+| `MAX_FILES_PER_UPLOAD` | файлов за одну загрузку | `50` |
+| `ACCESS_CODE` | код доступа к приложению, если оно в открытом доступе | не задан |
+
+Полный список в `.env.example`.
+
+## Приватность
+
+На диск ничего не пишется: файлы, фрагменты, векторы и таблицы живут в памяти процесса и удаляются через 4 часа простоя, при нажатии «удалить» или при перезапуске. Но сам вопрос, найденные фрагменты и (для таблиц) схема с парой строк-примеров отправляются LLM-провайдеру. Для конфиденциальных данных используйте проверенного провайдера или свою модель через `LLM_BASE_URL` (vLLM, Ollama).
+
+## Безопасность
+
+Текст из документов считается недоверенным и подаётся в модель в отдельных тегах как данные, а не как инструкции. SQL от модели проходит несколько проверок: только один SELECT, чёрный список функций, DuckDB без внешнего доступа, лимиты по памяти и времени. Файлы проверяются по сигнатуре, размеру и степени сжатия. Есть лимиты запросов по IP, ограничение числа сессий и необязательный код доступа. Сессии выдаёт только сервер.
+
+## Тесты
+
+```bash
+cd backend && pip install -r requirements-ci.txt -c constraints.txt && pytest -q
+cd frontend && npm test && npm run lint && npm run build
+```
+
+Больше 120 тестов на бэкенде и 12 на фронтенде. Они идут на заглушках вместо моделей и LLM, поэтому без интернета. Качество на реальных моделях проверяет отдельный скрипт:
 
 ```bash
 cd backend
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-# macOS / Linux
-source venv/bin/activate
-
-pip install -r requirements.txt
-
-cp .env.example .env
-# then open .env and set your LLM_API_KEY
+python -m eval.run_eval --retrieval-only    # только поиск, без LLM
+python -m eval.run_eval                      # поиск, ответы, цитаты, SQL
 ```
 
-Start the API server (single worker — required by the in-memory architecture, see
-[Known limitations](#known-limitations)):
+## Ограничения
 
-```bash
-uvicorn app.main:app --reload --workers 1
-```
+- Один процесс (`--workers 1`): всё хранится в памяти, в том числе векторы в ChromaDB. Для нескольких серверов состояние нужно вынести в Redis, а векторы в серверную базу (pgvector, Qdrant).
+- Смысловой поиск в Chroma приближённый (HNSW), поэтому после смены настроек качество стоит перепроверить через `eval`.
+- Ответ приходит целиком, по токенам не стримится, потому что модель должна вернуть проверяемый JSON.
+- Формулы в xlsx без сохранённого значения читаются как пустые ячейки.
+- Рукописный текст и таблицы внутри картинок OCR не восстанавливает.
+- Порог отсечения реранкера (`RERANK_MIN_SCORE`) лучше подобрать на своих документах через `eval`.
+- Свой фон интерфейса: положите картинку в `frontend/public/background.jpg`.
 
-The API is now available at `http://localhost:8000`. Interactive API docs are at
-`http://localhost:8000/docs`.
+## Лицензия
 
-### 3. Frontend setup
-
-In a new terminal:
-
-```bash
-cd frontend
-npm install
-
-cp .env.example .env
-# .env only needs VITE_API_URL, which already defaults to http://localhost:8000
-```
-
-```bash
-npm run dev
-```
-
-Open `http://localhost:5173` in your browser.
-
-### 4. Try it out
-
-1. Upload a PDF, DOCX, CSV, or XLSX file from the sidebar.
-2. Wait for its status to change to "Indexed".
-3. Ask a question about its contents in the search box.
-
-## Configuration reference (backend `.env`)
-
-| Variable                    | Description                                             | Default                            |
-|------------------------------|-----------------------------------------------------------|-------------------------------------|
-| `LLM_PROVIDER`                | `deepseek` or `openai` (selects base URL + default model) | `deepseek`                          |
-| `LLM_API_KEY`                 | API key for the chosen LLM provider                       | *(required)*                        |
-| `LLM_MODEL`                   | Overrides the provider's default model                    | *(provider default)*                |
-| `LLM_BASE_URL`                | Overrides the provider's default API base URL             | *(provider default)*                |
-| `EMBEDDING_MODEL`             | Sentence-Transformers model used for embeddings            | `intfloat/multilingual-e5-small`    |
-| `MAX_UPLOAD_MB`                | Max size per uploaded file, in MB                          | `200`                               |
-| `MAX_FILES_PER_UPLOAD`        | Max number of files per upload request                     | `40`                                |
-| `RETRIEVAL_TOP_K`             | Number of chunks retrieved per question                    | `8`                                  |
-| `CHUNK_SIZE` / `CHUNK_OVERLAP` | Text splitting parameters                                  | `900` / `150`                       |
-| `CORS_ORIGINS`                | Comma-separated list of allowed frontend origins            | `http://localhost:5173`             |
-| `SESSION_TTL_HOURS`           | Hours of inactivity before a session is auto-deleted        | `4`                                  |
-| `SESSION_COOKIE_SECURE`       | Set to `True` when serving over HTTPS in production          | `False`                              |
-| `CLEANUP_INTERVAL_MINUTES`    | How often the background cleanup job runs                    | `15`                                 |
-
-## API overview
-
-| Method | Endpoint                     | Description                                   |
-|--------|-------------------------------|------------------------------------------------|
-| POST   | `/api/documents/upload`       | Upload one or more documents                    |
-| GET    | `/api/documents`              | List the current session's documents            |
-| DELETE | `/api/documents/{doc_id}`     | Delete a single document                        |
-| POST   | `/api/query`                  | Ask a question about the indexed documents      |
-| DELETE | `/api/session`                | Immediately wipe all data for the current session |
-| GET    | `/api/health`                 | Health check                                    |
-
-Full interactive documentation is auto-generated by FastAPI at `/docs`.
-
-## Privacy & Security
-
-- **Nothing touches the disk.** Uploaded files are read straight into memory, text is
-  extracted from bytes (never written to a temp file), and both the document registry
-  and the vector index are plain in-process data structures — not files or databases on
-  disk.
-- **Per-user isolation.** Every document, chunk, and vector is tagged with an opaque,
-  cryptographically random session ID (`secrets.token_urlsafe(32)`) stored in an
-  `httpOnly`, `SameSite=Lax` cookie. Every read/write is filtered by that ID, so one
-  user can never see or delete another user's data.
-- **Automatic expiry.** Idle sessions are purged by a background task after
-  `SESSION_TTL_HOURS`. Restarting the backend process also clears all data immediately.
-
-## Known limitations
-
-- **Single-process only.** The in-memory design intentionally trades horizontal
-  scalability for privacy: run the backend with `--workers 1` and a single instance.
-  Scaling out would require moving session/document state to a shared store (e.g.
-  Redis) and encrypting data at rest — a natural next step, not implemented here by
-  design.
-- **No true "delete on tab close".** Browsers do not reliably notify servers when a
-  tab is closed, so data lifetime is bounded by the idle TTL and the explicit
-  "Clear my data" action instead.
-- **CPU-bound embedding step.** Because of Python's GIL, concurrent uploads share a
-  single CPU core for the embedding step; heavy concurrent load will be processed
-  correctly but sequentially in terms of raw CPU time.
-
-
-## License
-
-This project is a personal portfolio piece. All rights reserved — no license is
-granted to copy, modify, redistribute, or reuse this code, in whole or in part,
-without the author's explicit written permission.
-
-This repository does not accept external contributions (pull requests, patches, or
-added files). It is shared for review and demonstration purposes only.
+Личный проект. Все права защищены, копировать и использовать код без письменного разрешения автора нельзя.

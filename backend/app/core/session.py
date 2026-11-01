@@ -1,79 +1,81 @@
 from __future__ import annotations
 
+import hashlib
+import re
 import secrets
 import threading
-from datetime import datetime, timezone
-from typing import Any
-
-from fastapi import Request, Response
+import time
 
 from app.core.config import get_settings
 
+_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{43}$")
 _lock = threading.Lock()
-_sessions: dict[str, dict[str, Any]] = {}  # session_id -> {created_at, last_activity}
+_sessions: dict[str, float] = {}
+_unlocked: set[str] = set()
 
 
-def _is_valid_token(session_id: str) -> bool:
-    return bool(session_id) and all(c.isalnum() or c in "-_" for c in session_id)
+class SessionCapacityError(Exception):
+    pass
 
 
-def touch(session_id: str) -> None:
+def sid_hash(session_id: str) -> str:
+    return hashlib.sha256(session_id.encode()).hexdigest()[:8]
+
+
+def lookup(cookie_value: str | None) -> str | None:
+    ttl = get_settings().session_ttl_minutes * 60
+    now = time.time()
     with _lock:
-        now = datetime.now(timezone.utc).isoformat()
-        entry = _sessions.setdefault(session_id, {"created_at": now})
-        entry["last_activity"] = now
+        if cookie_value and _TOKEN_RE.match(cookie_value):
+            last = _sessions.get(cookie_value)
+            if last is not None and now - last <= ttl:
+                _sessions[cookie_value] = now
+                return cookie_value
+    return None
+
+
+def create() -> str:
+    with _lock:
+        if len(_sessions) >= get_settings().max_sessions:
+            raise SessionCapacityError
+        sid = secrets.token_urlsafe(32)
+        _sessions[sid] = time.time()
+        return sid
+
+
+def exists(session_id: str) -> bool:
+    with _lock:
+        return session_id in _sessions
 
 
 def drop(session_id: str) -> None:
     with _lock:
         _sessions.pop(session_id, None)
+        _unlocked.discard(session_id)
 
 
-def get_session_id(request: Request, response: Response) -> str:
-    settings = get_settings()
-    session_id = request.cookies.get(settings.session_cookie_name)
-
-    if not session_id or not _is_valid_token(session_id):
-        session_id = secrets.token_urlsafe(32)
-        response.set_cookie(
-            key=settings.session_cookie_name,
-            value=session_id,
-            httponly=True,
-            samesite="lax",
-            secure=settings.session_cookie_secure,
-            max_age=settings.session_ttl_hours * 3600,
-            path="/",
-        )
-
-    touch(session_id)
-    return session_id
-
-
-def purge_expired(registry_module, vector_store_module) -> list[str]:
-    """Removes sessions that have had no activity for longer than the TTL.
-    There's nothing to clean up on disk — nothing is ever written there."""
-    settings = get_settings()
-    now = datetime.now(timezone.utc)
-
+def unlock(session_id: str) -> None:
     with _lock:
-        snapshot = dict(_sessions)
-
-    expired = [
-        sid for sid, meta in snapshot.items()
-        if (now - datetime.fromisoformat(meta["last_activity"])).total_seconds()
-        > settings.session_ttl_hours * 3600
-    ]
-
-    for sid in expired:
-        wipe_session(sid, registry_module, vector_store_module)
-
-    return expired
+        if session_id in _sessions:
+            _unlocked.add(session_id)
 
 
-def wipe_session(session_id: str, registry_module, vector_store_module) -> None:
-    """Single source of truth for tearing down everything tied to a session.
-    Used by both the background cleanup loop and the explicit
-    DELETE /api/session endpoint, so the teardown logic only lives in one place."""
-    registry_module.remove_session(session_id)
-    vector_store_module.delete_session(session_id)
-    drop(session_id)
+def is_unlocked(session_id: str) -> bool:
+    with _lock:
+        return session_id in _unlocked
+
+
+def expired_ids() -> list[str]:
+    ttl = get_settings().session_ttl_minutes * 60
+    now = time.time()
+    with _lock:
+        dead = [s for s, last in _sessions.items() if now - last > ttl]
+        for s in dead:
+            del _sessions[s]
+            _unlocked.discard(s)
+        return dead
+
+
+def count() -> int:
+    with _lock:
+        return len(_sessions)

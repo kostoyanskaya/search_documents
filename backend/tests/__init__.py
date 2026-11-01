@@ -1,0 +1,17 @@
+import os
+
+os.environ.update(
+    SESSION_COOKIE_SECURE="false",
+    PARSE_IN_SUBPROCESS="false",
+    CORS_ORIGINS="http://localhost:5173",
+    LLM_API_KEY="test-key",
+    RATE_LIMIT_QUERY_PER_MIN="1000",
+    RATE_LIMIT_UPLOAD_PER_MIN="1000",
+    RATE_LIMIT_OTHER_PER_MIN="1000",
+    RATE_LIMIT_UNLOCK_PER_MIN="1000",
+    MAX_UPLOAD_MB="5",
+    MAX_SESSION_TOTAL_MB="20",
+    MAX_DOCS_PER_SESSION="6",
+    SQL_TIMEOUT_S="2",
+    ENABLE_METRICS="true",
+)

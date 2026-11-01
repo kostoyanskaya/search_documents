@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
-
 * {
   margin: 0;
   padding: 0;
@@ -7,24 +5,35 @@
 }
 
 :root {
-  --bg: #08090d;
-  --bg-soft: #0d0f15;
-  --panel: rgba(18, 20, 28, 0.78);
-  --panel-solid: #12141c;
+  color-scheme: light;
 
-  --border: rgba(255, 255, 255, 0.08);
-  --border-light: rgba(255, 255, 255, 0.13);
+  --bg: #eef0fb;
+  --bg-soft: #f5f6fd;
+  --panel: rgba(40, 46, 90, 0.4);
+  --panel-solid: #ffffff;
 
-  --text: #f5f5f7;
-  --text-soft: #9a9da8;
-  --text-muted: #5e626e;
+  --border: rgba(40, 46, 90, 0.1);
+  --border-light: rgba(40, 46, 90, 0.16);
 
-  --accent: #8b7cff;
-  --accent-light: #b7adff;
-  --cyan: #57d9ff;
+  --text: #1c2033;
+  --text-soft: #4d5370;
+  --text-muted: #7a8099;
 
-  --font-display: 'Space Grotesk', sans-serif;
-  --font-body: 'DM Sans', sans-serif;
+  --accent: #7566f0;
+  --accent-light: #5a49d6;
+  --cyan: #2fb4e6;
+
+  /* Page background picture. Put your own file at
+     frontend/public/background.jpg - it is picked up automatically
+     (if the file is missing, the soft gradient below is shown). */
+  --bg-image: url('/background.jpg');
+  /* how much white is laid over the picture to keep text readable
+     (0 = none, 1 = picture hidden) and how much it is blurred */
+  --veil: 0.3;
+  --glass-blur: 18px;
+
+  --font-display: 'Space Grotesk', 'Inter Variable', system-ui, sans-serif;
+  --font-body: 'DM Sans', 'Inter Variable', system-ui, sans-serif;
 }
 
 html {
@@ -54,12 +63,31 @@ button {
   display: flex;
   position: relative;
   background:
-    linear-gradient(
-      120deg,
-      rgba(139, 124, 255, 0.035),
-      transparent 35%
+    var(--bg-image) center / cover no-repeat fixed,
+    radial-gradient(
+      900px 600px at 12% 8%,
+      rgba(168, 154, 255, 0.45),
+      transparent 60%
     ),
-    #08090d;
+    radial-gradient(
+      800px 600px at 92% 90%,
+      rgba(120, 214, 255, 0.4),
+      transparent 60%
+    ),
+    linear-gradient(135deg, #f3f1ff, #e8f4ff 55%, #fdf2fb)
+      fixed;
+}
+
+/* soft white veil + blur over the picture keeps the text readable */
+.app-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: rgba(255, 255, 255, var(--veil));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) / 3));
+  backdrop-filter: blur(calc(var(--glass-blur) / 3));
 }
 
 /* ========================================
@@ -71,7 +99,8 @@ button {
   pointer-events: none;
   border-radius: 50%;
   filter: blur(100px);
-  opacity: 0.15;
+  opacity: 0.3;
+  z-index: 0;
 }
 
 .ambient-one {
@@ -88,7 +117,7 @@ button {
   background: #22b8e8;
   bottom: -180px;
   left: 30%;
-  opacity: 0.07;
+  opacity: 0.22;
 }
 
 /* ========================================
@@ -107,11 +136,13 @@ button {
   background:
     linear-gradient(
       180deg,
-      rgba(18, 20, 28, 0.96),
-      rgba(10, 11, 16, 0.96)
+      rgba(255, 255, 255, 0.72),
+      rgba(246, 247, 255, 0.72)
     );
 
   border-right: 1px solid var(--border);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
 
   display: flex;
   flex-direction: column;
@@ -212,7 +243,7 @@ button {
 }
 
 .document-list::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(40, 46, 90, 0.052);
   border-radius: 10px;
 }
 
@@ -241,7 +272,7 @@ button {
 }
 
 .document-item:hover {
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(40, 46, 90, 0.046);
 }
 
 .document-type {
@@ -265,23 +296,23 @@ button {
 }
 
 .document-type--pdf {
-  background: #d95266;
+  background: #692748;
 }
 
 .document-type--doc {
-  background: #5278dd;
+  background: #263661;
 }
 
 .document-type--csv {
-  background: #3aa982;
+  background: #0a4832;
 }
 
 .document-type--xlsx {
-  background: #3e9b68;
+  background: #287c85;
 }
 
 .document-type--other {
-  background: #555966;
+  background: #8b91ab;
 }
 
 .document-info {
@@ -297,7 +328,7 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
 
-  color: #dedfe5;
+  color: #252a42;
 }
 
 .document-status {
@@ -323,22 +354,22 @@ button {
 
 .status-dot--ready,
 .online-dot {
-  background: #52d39a;
+  background: #1f8f66;
   box-shadow:
     0 0 10px rgba(82, 211, 154, 0.5);
 }
 
 .status-dot--processing {
-  background: #ffb84d;
+  background: #b7791f;
   animation: pulse 1.2s infinite;
 }
 
 .status-dot--queued {
-  background: #686c77;
+  background: #a3a9c0;
 }
 
 .status-dot--failed {
-  background: #ef6675;
+  background: #d23b50;
 }
 
 @keyframes pulse {
@@ -374,7 +405,7 @@ button {
 }
 
 .delete-button:hover {
-  color: #ff6d7a;
+  color: #d23b50;
   background: rgba(255, 80, 100, 0.1);
 }
 
@@ -404,7 +435,7 @@ button {
   margin-bottom: 10px;
 
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(40, 46, 90, 0.033);
 }
 
 /* Sidebar bottom */
@@ -426,7 +457,7 @@ button {
 
   font-size: 10px;
   font-weight: 500;
-  color: #d9dbe2;
+  color: #252a42;
 }
 
 .system-status small {
@@ -449,6 +480,7 @@ button {
   min-height: 100vh;
 
   position: relative;
+  z-index: 1;
 
   display: flex;
   flex-direction: column;
@@ -484,11 +516,19 @@ button {
 ======================================== */
 
 .workspace-content {
-  width: min(900px, calc(100% - 80px));
+  width: min(940px, calc(100% - 80px));
 
-  margin: 0 auto;
+  margin: 28px auto 0;
 
-  padding: 70px 0 80px;
+  padding: 56px 52px 64px;
+
+  /* one frosted sheet: text stays readable over any background picture */
+  background: rgba(255, 255, 255, 0.64);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 28px;
+  box-shadow: 0 24px 70px rgba(50, 56, 120, 0.14);
 }
 
 /* ========================================
@@ -540,7 +580,10 @@ button {
 }
 
 .hero h1 span {
-  color: var(--accent-light);
+  background: linear-gradient(135deg, #3629aa, #2fb4e6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .hero-copy p {
@@ -576,15 +619,15 @@ button {
     ),
     linear-gradient(
       145deg,
-      rgba(25, 27, 38, 0.9),
-      rgba(10, 11, 16, 0.7)
+      rgba(255, 255, 255, 0.92),
+      rgba(255, 255, 255, 0.7)
     );
 
   border: 1px solid var(--border-light);
 
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    0 40px 100px rgba(0,0,0,0.3);
+    inset 0 1px 0 rgba(40, 46, 90, 0.065),
+    0 40px 100px rgba(50, 56, 120, 0.13);
 }
 
 .visual-grid {
@@ -593,12 +636,12 @@ button {
 
   background-image:
     linear-gradient(
-      rgba(255,255,255,0.025) 1px,
+      rgba(40, 46, 90, 0.033) 1px,
       transparent 1px
     ),
     linear-gradient(
       90deg,
-      rgba(255,255,255,0.025) 1px,
+      rgba(40, 46, 90, 0.033) 1px,
       transparent 1px
     );
 
@@ -622,24 +665,29 @@ button {
   animation: float 6s ease-in-out infinite;
 }
 
-.orb-large {
+.lens {
+  position: absolute;
   width: 170px;
   height: 170px;
-
   left: 75px;
   top: 50px;
 
-  background:
-    radial-gradient(
-      circle at 35% 30%,
-      #b5adff,
-      #6458df 35%,
-      #211e48 70%,
-      transparent 72%
-    );
+  filter: drop-shadow(0 12px 22px rgba(117, 99, 255, 0.35));
+  transform-origin: 40% 40%;
+  animation: lens-scan 7s ease-in-out infinite;
+}
 
-  box-shadow:
-    0 0 80px rgba(117, 99, 255, 0.4);
+/* лупа «ищет»: плавно ходит по кругу и слегка качается */
+@keyframes lens-scan {
+  0%   { transform: translate(0, 0) rotate(-6deg); }
+  25%  { transform: translate(14px, -10px) rotate(4deg); }
+  50%  { transform: translate(0, -16px) rotate(8deg); }
+  75%  { transform: translate(-14px, -6px) rotate(0deg); }
+  100% { transform: translate(0, 0) rotate(-6deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lens { animation: none; }
 }
 
 .orb-medium {
@@ -669,7 +717,7 @@ button {
   background:
     radial-gradient(
       circle,
-      rgba(180, 172, 255, 0.65),
+      rgba(90, 73, 214, 0.65),
       transparent
     );
 
@@ -708,16 +756,16 @@ button {
   border-radius: 22px;
 
   background:
-    rgba(10, 11, 17, 0.55);
+    rgba(255, 255, 255, 0.55);
 
   backdrop-filter: blur(15px);
 
-  border: 1px solid rgba(255,255,255,0.15);
+  border: 1px solid rgba(40, 46, 90, 0.195);
 
-  color: white;
+  color: var(--text);
 
   box-shadow:
-    0 15px 40px rgba(0,0,0,0.35);
+    0 15px 40px rgba(50, 56, 120, 0.14);
 }
 
 /* ========================================
@@ -744,7 +792,7 @@ button {
 
 .shortcut {
   font-size: 8px;
-  color: #4e525d;
+  color: #7e84a0;
 }
 
 .search-box {
@@ -759,12 +807,12 @@ button {
   border-radius: 17px;
 
   background:
-    rgba(18, 20, 28, 0.86);
+    rgba(255, 255, 255, 0.78);
 
   border: 1px solid var(--border-light);
 
   box-shadow:
-    0 25px 60px rgba(0,0,0,0.25);
+    0 25px 60px rgba(50, 56, 120, 0.11);
 
   transition:
     border-color 0.2s,
@@ -776,7 +824,7 @@ button {
 
   box-shadow:
     0 0 0 4px rgba(139,124,255,0.06),
-    0 25px 60px rgba(0,0,0,0.25);
+    0 25px 60px rgba(50, 56, 120, 0.11);
 }
 
 .search-box > svg {
@@ -793,13 +841,13 @@ button {
   border: 0;
   outline: 0;
 
-  color: white;
+  color: var(--text);
 
   font-size: 14px;
 }
 
 .search-box input::placeholder {
-  color: #5d616d;
+  color: #7a8099;
 }
 
 .ask-button {
@@ -862,9 +910,9 @@ button {
 
   padding: 5px 9px;
 
-  background: rgba(255,255,255,0.025);
+  background: rgba(40, 46, 90, 0.033);
 
-  color: #777b87;
+  color: #6e7490;
 
   font-size: 9px;
 
@@ -974,7 +1022,7 @@ button {
 
   border-radius: 9px;
 
-  background: rgba(255,255,255,0.06);
+  background: rgba(40, 46, 90, 0.078);
 
   color: var(--text-muted);
 
@@ -986,7 +1034,7 @@ button {
 .question-text {
   padding-top: 4px;
 
-  color: #d9dae0;
+  color: #252a42;
 
   font-family: var(--font-display);
 
@@ -1010,7 +1058,7 @@ button {
     linear-gradient(
       135deg,
       rgba(139,124,255,0.08),
-      rgba(255,255,255,0.025)
+      rgba(40, 46, 90, 0.033)
     );
 
   border: 1px solid
@@ -1057,7 +1105,7 @@ button {
 }
 
 .ai-answer p {
-  color: #e3e4e9;
+  color: #252a42;
 
   font-size: 14px;
 
@@ -1065,7 +1113,7 @@ button {
 }
 
 .not-found {
-  color: #e6ad5a !important;
+  color: #b7791f !important;
 }
 
 /* ========================================
@@ -1101,7 +1149,7 @@ button {
   border-radius: 13px;
 
   background:
-    rgba(255,255,255,0.025);
+    rgba(40, 46, 90, 0.033);
 
   border: 1px solid var(--border);
 
@@ -1112,10 +1160,10 @@ button {
 
 .source-card:hover {
   background:
-    rgba(255,255,255,0.04);
+    rgba(40, 46, 90, 0.052);
 
   border-color:
-    rgba(255,255,255,0.13);
+    rgba(40, 46, 90, 0.169);
 }
 
 .source-icon {
@@ -1130,28 +1178,28 @@ button {
 
   border-radius: 9px;
 
-  color: white;
+  color: #3b4266;
 }
 
 .source-icon--pdf {
   background: rgba(217,82,102,0.18);
-  color: #f37b8c;
+  color: #53232a;
 }
 
 .source-icon--doc {
   background: rgba(82,120,221,0.18);
-  color: #7898ef;
+  color: #3b486c;
 }
 
 .source-icon--csv,
 .source-icon--xlsx {
   background: rgba(58,169,130,0.15);
-  color: #64cda4;
+  color: #214538;
 }
 
 .source-icon--other {
-  background: rgba(255,255,255,0.06);
-  color: #aaaeb8;
+  background: rgba(40, 46, 90, 0.078);
+  color: #4d5370;
 }
 
 .source-main {
@@ -1175,11 +1223,11 @@ button {
   font-size: 11px;
   font-weight: 600;
 
-  color: #d9dbe2;
+  color: #252a42;
 }
 
 .source-score {
-  color: #61cfa3;
+  color: #1f8f66;
 
   font-family: monospace;
 
@@ -1217,7 +1265,7 @@ button {
 }
 
 .source-link:hover {
-  color: white;
+  color: var(--text);
 }
 
 /* ========================================
@@ -1234,7 +1282,7 @@ button {
   border: 1px solid var(--border);
 
   background:
-    rgba(255,255,255,0.02);
+    rgba(40, 46, 90, 0.026);
 }
 
 .loading-line {
@@ -1248,9 +1296,9 @@ button {
   background:
     linear-gradient(
       90deg,
-      rgba(255,255,255,0.03),
+      rgba(40, 46, 90, 0.039),
       rgba(139,124,255,0.15),
-      rgba(255,255,255,0.03)
+      rgba(40, 46, 90, 0.039)
     );
 
   background-size: 300% 100%;
@@ -1294,7 +1342,7 @@ button {
   border: 1px solid
     rgba(239,102,117,0.18);
 
-  color: #ef8995;
+  color: #d23b50;
 
   font-size: 11px;
 }
@@ -1329,7 +1377,10 @@ button {
 
   border-top: 1px solid var(--border);
 
-  color: #424650;
+  color: var(--text-soft);
+  background: rgba(255, 255, 255, 0.5);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
 
   font-size: 8px;
 
@@ -1352,7 +1403,7 @@ button {
   justify-content: center;
 
   background:
-    rgba(4,5,8,0.76);
+    rgba(36, 40, 80, 0.32);
 
   backdrop-filter: blur(18px);
 }
@@ -1369,14 +1420,14 @@ button {
   background:
     linear-gradient(
       145deg,
-      rgba(27,29,40,0.98),
-      rgba(12,13,18,0.98)
+      rgba(255, 255, 255, 0.94),
+      rgba(255, 255, 255, 0.96)
     );
 
   border: 1px solid var(--border-light);
 
   box-shadow:
-    0 40px 100px rgba(0,0,0,0.55);
+    0 40px 100px rgba(50, 56, 120, 0.2);
 }
 
 .progress-orbit {
@@ -1411,7 +1462,7 @@ button {
 
   border-radius: 50%;
 
-  background: #101119;
+  background: #ffffff;
 }
 
 .progress-glow {
@@ -1476,9 +1527,9 @@ button {
 
   border-radius: 8px;
 
-  background: rgba(255,255,255,0.04);
+  background: rgba(40, 46, 90, 0.052);
 
-  color: #8d919d;
+  color: #646a86;
 
   font-size: 9px;
 
@@ -1552,9 +1603,10 @@ button {
   }
 
   .workspace-content {
-    width: calc(100% - 36px);
+    width: calc(100% - 24px);
 
-    padding-top: 45px;
+    padding: 32px 20px 40px;
+    border-radius: 22px;
   }
 
   .hero {
@@ -1581,9 +1633,9 @@ button {
     margin-top: 35px;
   }
 
-  .orb-large {
+  .lens {
     left: 50%;
-    transform: translateX(-50%);
+    margin-left: -85px; /* центр без transform, иначе ломается анимация */
   }
 
   .search-box {
@@ -1654,8 +1706,8 @@ button {
   border: 1px solid rgba(139, 124, 255, 0.15);
   border-radius: 17px;
   padding: 24px 26px;
-  background: linear-gradient(135deg, rgba(139,124,255,0.06), rgba(255,255,255,0.015));
-  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  background: linear-gradient(135deg, rgba(139,124,255,0.06), rgba(40, 46, 90, 0.019));
+  box-shadow: 0 20px 60px rgba(50, 56, 120, 0.09);
 }
 
 .answer-entry .question-row {
@@ -1696,7 +1748,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(4, 5, 8, 0.85);
+  background: rgba(36, 40, 80, 0.4);
   backdrop-filter: blur(12px);
   animation: fadeIn 0.25s ease;
 }
@@ -1717,9 +1769,9 @@ button {
   overflow-y: auto;
   padding: 32px 36px 28px;
   border-radius: 24px;
-  background: linear-gradient(145deg, rgba(27, 29, 40, 0.98), rgba(12, 13, 18, 0.98));
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.96));
   border: 1px solid var(--border-light);
-  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 40px 100px rgba(50, 56, 120, 0.3);
   animation: slideUp 0.3s ease;
 }
 
@@ -1745,13 +1797,13 @@ button {
   justify-content: center;
   border: none;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(40, 46, 90, 0.078);
   color: var(--text-muted);
   transition: background 0.2s, color 0.2s;
 }
 
 .answer-modal-close:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(40, 46, 90, 0.156);
   color: var(--text);
 }
 
@@ -1776,7 +1828,7 @@ button {
   align-items: center;
   justify-content: center;
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(40, 46, 90, 0.078);
   color: var(--text-muted);
   font-size: 7px;
   font-weight: 700;
@@ -1785,7 +1837,7 @@ button {
 
 .answer-modal-content .question-text {
   padding-top: 4px;
-  color: #d9dae0;
+  color: #252a42;
   font-family: var(--font-display);
   font-size: 16px;
   line-height: 1.4;
@@ -1799,7 +1851,7 @@ button {
 }
 
 .answer-modal-content .ai-answer p {
-  color: #e3e4e9;
+  color: #252a42;
   font-size: 14px;
   line-height: 1.75;
 }
@@ -1831,13 +1883,13 @@ button {
 .answer-modal-content .source-card {
   padding: 14px;
   border-radius: 13px;
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(40, 46, 90, 0.033);
   border: 1px solid var(--border);
 }
 
 .answer-modal-content .source-card:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.13);
+  background: rgba(40, 46, 90, 0.052);
+  border-color: rgba(40, 46, 90, 0.169);
 }
 
 
@@ -1871,4 +1923,105 @@ button {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+/* ---- additions: notice, language switch, source location, progress dismiss, failed-document reason ---- */
+.info-message {
+  padding: 12px 15px;
+  border-radius: 11px;
+  background: rgba(124, 140, 255, 0.08);
+  border: 1px solid rgba(124, 140, 255, 0.2);
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+.lang-switch { display: inline-flex; gap: 2px; margin-left: 14px; }
+.lang-switch button {
+  background: transparent; border: 1px solid rgba(40, 46, 90, 0.156); color: inherit;
+  padding: 2px 8px; font-size: 11px; border-radius: 6px; cursor: pointer; opacity: 0.6;
+}
+.lang-switch button.lang-active { opacity: 1; background: rgba(124, 140, 255, 0.18); }
+.source-location { font-size: 11px; opacity: 0.65; white-space: nowrap; }
+.source-excerpt--verified { font-style: italic; }
+.progress-dismiss {
+  margin-top: 18px; background: transparent; color: inherit; cursor: pointer;
+  border: 1px solid rgba(40, 46, 90, 0.234); border-radius: 9px; padding: 8px 14px; font-size: 12px;
+}
+.document-error { font-size: 11px; color: #d23b50; margin-top: 2px; line-height: 1.3; }
+
+/* ---- agent UI: live steps, calculation block, "how this was found", access gate ---- */
+.live-step { font-size: 13px; opacity: 0.8; margin-bottom: 12px; letter-spacing: 0.02em; }
+.calc-block { margin-top: 18px; }
+.calc-sql {
+  margin: 8px 0; padding: 12px 14px; border-radius: 10px; overflow-x: auto; font-size: 12.5px; line-height: 1.5;
+  background: rgba(40, 46, 90, 0.052); border: 1px solid rgba(40, 46, 90, 0.104);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word;
+}
+.calc-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid rgba(40, 46, 90, 0.104); }
+.calc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.calc-table th, .calc-table td { padding: 8px 12px; text-align: left; white-space: nowrap; }
+.calc-table th { font-weight: 600; opacity: 0.7; border-bottom: 1px solid rgba(40, 46, 90, 0.13); }
+.calc-table tr + tr td { border-top: 1px solid rgba(40, 46, 90, 0.065); }
+.how-block { margin-top: 18px; font-size: 13px; }
+.how-block summary { cursor: pointer; letter-spacing: 0.08em; font-size: 11px; opacity: 0.65; padding: 6px 0; }
+.how-rewritten { margin: 8px 0; opacity: 0.8; }
+.how-steps { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.how-steps li { display: grid; grid-template-columns: 190px 1fr auto; gap: 10px; align-items: baseline; }
+.how-steps span { opacity: 0.65; }
+.how-steps small { opacity: 0.45; }
+.access-gate { max-width: 400px; padding: 28px; display: grid; gap: 14px; }
+.access-gate h2 { margin: 0; font-size: 20px; }
+.access-gate p { margin: 0; opacity: 0.75; font-size: 14px; }
+.access-gate input {
+  padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(40, 46, 90, 0.195);
+  background: rgba(40, 46, 90, 0.065); color: inherit; font-size: 15px;
+}
+@media (max-width: 640px) { .how-steps li { grid-template-columns: 1fr; gap: 2px; } }
+
+.progress-count {
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+
+/* ========================================
+   CLEAR SESSION BUTTON
+======================================== */
+
+.clear-session-button {
+  width: 100%;
+
+  margin-top: 14px;
+  padding: 9px 14px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  border: 1px solid rgba(128, 50, 185, 0.22);
+  border-radius: 999px;
+
+  background: rgba(217, 82, 102, 0.07);
+  color: #2c377a;
+
+  font-size: 11px;
+  font-weight: 500;
+
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    color 0.2s,
+    transform 0.2s;
+}
+
+.clear-session-button:hover {
+  background: rgba(62, 34, 164, 0.14);
+  border-color: rgba(143, 82, 217, 0.4);
+  color: #245b8c;
+  transform: translateY(-1px);
+}
+
+.clear-session-button:active {
+  transform: translateY(0);
 }

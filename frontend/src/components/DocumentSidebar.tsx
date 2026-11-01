@@ -1,15 +1,9 @@
 import type { ChangeEvent } from 'react'
 
+import { useI18n } from '../i18n'
 import type { DocumentInfo } from '../types'
 import { extensionOf, fileClassOf } from '../utils/documents'
 import { Icon } from './Icon'
-
-const STATUS_LABELS: Record<DocumentInfo['status'], string> = {
-  ready: 'Indexed',
-  processing: 'Processing',
-  queued: 'Queued',
-  failed: 'Failed',
-}
 
 interface DocumentSidebarProps {
   documents: DocumentInfo[]
@@ -28,6 +22,7 @@ export function DocumentSidebar({
   onDelete,
   onClearSession,
 }: DocumentSidebarProps) {
+  const { t } = useI18n()
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -36,19 +31,19 @@ export function DocumentSidebar({
         </div>
         <div>
           <div className="brand-name">DocMind</div>
-          <div className="brand-version">AI DOCUMENT AGENT</div>
+          <div className="brand-version">{t('sidebar.brand')}</div>
         </div>
       </div>
 
       <div className="sidebar-section">
         <div className="sidebar-label">
-          DOCUMENTS
+          {t('sidebar.documents')}
           <span>{documents.length}</span>
         </div>
 
         <label className="upload-button">
           <Icon name="upload" size={17} />
-          <span>Add the documents</span>
+          <span>{t('sidebar.add')}</span>
           <input
             type="file"
             multiple
@@ -64,7 +59,7 @@ export function DocumentSidebar({
               <div className="empty-icon">
                 <Icon name="file" size={19} />
               </div>
-              <span>Your documents will appear here</span>
+              <span>{t('sidebar.empty')}</span>
             </div>
           ) : (
             documents.map((doc) => {
@@ -76,16 +71,17 @@ export function DocumentSidebar({
 
                   <div className="document-info">
                     <div className="document-name">{doc.filename}</div>
+                    {doc.status === 'failed' && doc.error && <div className="document-error">{doc.error}</div>}
                     <div className="document-status">
                       <span className={`status-dot status-dot--${doc.status}`} />
-                      {STATUS_LABELS[doc.status]}
+                      {t(`status.${doc.status}` as 'status.ready')}
                     </div>
                   </div>
 
                   <button
                     className="delete-button"
                     onClick={() => onDelete(doc.doc_id)}
-                    aria-label={`Удалить ${doc.filename}`}
+                    aria-label={`${t('sidebar.delete')} ${doc.filename}`}
                   >
                     <Icon name="trash" size={15} />
                   </button>
@@ -100,14 +96,14 @@ export function DocumentSidebar({
         <div className="system-status">
           <span className="online-dot" />
           <div>
-            <strong>AI system online</strong>
-            <small>{readyCount} indexed</small>
+            <strong>{t('sidebar.online')}</strong>
+            <small>{readyCount} {t('sidebar.indexed')}</small>
           </div>
         </div>
 
         <button className="clear-session-button" onClick={onClearSession}>
           <Icon name="trash" size={15} />
-          Delete my data
+          {t('sidebar.clear')}
         </button>
       </div>
     </aside>

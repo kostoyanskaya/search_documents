@@ -1,90 +1,131 @@
 from __future__ import annotations
 
-import hashlib
 import threading
-from datetime import datetime, timezone
-from typing import Any, Optional
+import uuid
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
-from app.models.schemas import DocumentInfo, DocStatus
-
-_lock = threading.Lock()
-_documents: dict[str, dict[str, Any]] = {}  # doc_id -> record (includes session_id)
+from app.models.schemas import DocStatus, DocumentInfo
 
 
-def file_hash(content: bytes) -> str:
-    return hashlib.sha256(content).hexdigest()[:16]
+class QuotaExceeded(Exception):
+    pass
 
 
-def find_by_hash(session_id: str, content_hash: str) -> Optional[dict]:
+@dataclass
+class _Entry:
+    info: DocumentInfo
+    content_hash: str
+
+
+_lock = threading.RLock()
+_docs: dict[str, dict[str, _Entry]] = {}
+
+
+def register_batch(
+    session_id: str, items: list[dict], max_docs: int, max_bytes: int
+) -> tuple[list[tuple[DocumentInfo, dict]], list[str]]:
+    """All-or-nothing: checks quotas for the whole batch, then registers it.
+    items: {filename, file_type, size, hash}.
+    Returns (accepted, skipped_duplicate_names)."""
     with _lock:
-        for entry in _documents.values():
-            if entry["session_id"] == session_id and entry["content_hash"] == content_hash:
-                return entry
-    return None
+        existing = _docs.setdefault(session_id, {})
+        known = {e.content_hash for e in existing.values()}
+        fresh, skipped = [], []
+        for it in items:
+            if it["hash"] in known:
+                skipped.append(it["filename"])
+                continue
+            known.add(it["hash"])
+            fresh.append(it)
+        if len(existing) + len(fresh) > max_docs:
+            raise QuotaExceeded(
+                f"Document limit per session reached ({max_docs})."
+            )
+        used = sum(e.info.size_bytes for e in existing.values())
+        if used + sum(i["size"] for i in fresh) > max_bytes:
+            raise QuotaExceeded(
+                "Total upload size limit for this session reached."
+            )
+        accepted = []
+        for it in fresh:
+            info = DocumentInfo(
+                doc_id=uuid.uuid4().hex,
+                filename=it["filename"],
+                file_type=it["file_type"],
+                size_bytes=it["size"],
+                status=DocStatus.QUEUED,
+                uploaded_at=datetime.now(UTC),
+            )
+            existing[info.doc_id] = _Entry(info, it["hash"])
+            accepted.append((info.model_copy(), it))
+        return accepted, skipped
 
 
-def register(
-    session_id: str, doc_id: str, filename: str, file_type: str,
-    size_bytes: int, content_hash: str,
-) -> DocumentInfo:
+def get(session_id: str, doc_id: str) -> DocumentInfo | None:
     with _lock:
-        entry = {
-            "doc_id": doc_id,
-            "session_id": session_id,
-            "filename": filename,
-            "file_type": file_type,
-            "size_bytes": size_bytes,
-            "status": DocStatus.QUEUED.value,
-            "chunks": 0,
-            "uploaded_at": datetime.now(timezone.utc).isoformat(),
-            "content_hash": content_hash,
-            "error": None,
-        }
-        _documents[doc_id] = entry
-        return _to_info(entry)
-
-
-def update_status(
-    session_id: str, doc_id: str, status: DocStatus,
-    chunks: int | None = None, error: str | None = None,
-) -> None:
-    with _lock:
-        entry = _documents.get(doc_id)
-        if not entry or entry["session_id"] != session_id:
-            return
-        entry["status"] = status.value
-        if chunks is not None:
-            entry["chunks"] = chunks
-        if error is not None:
-            entry["error"] = error
-
-
-def remove(session_id: str, doc_id: str) -> None:
-    with _lock:
-        entry = _documents.get(doc_id)
-        if entry and entry["session_id"] == session_id:
-            _documents.pop(doc_id, None)
-
-
-def remove_session(session_id: str) -> None:
-    with _lock:
-        for doc_id in [k for k, v in _documents.items() if v["session_id"] == session_id]:
-            _documents.pop(doc_id, None)
+        e = _docs.get(session_id, {}).get(doc_id)
+        return e.info.model_copy() if e else None
 
 
 def list_documents(session_id: str) -> list[DocumentInfo]:
     with _lock:
-        items = [_to_info(e) for e in _documents.values() if e["session_id"] == session_id]
-    return sorted(items, key=lambda d: d.uploaded_at, reverse=True)
+        return sorted(
+            (e.info.model_copy() for e in _docs.get(session_id, {}).values()),
+            key=lambda d: d.uploaded_at,
+        )
 
 
-def get(session_id: str, doc_id: str) -> Optional[DocumentInfo]:
+def update_status(
+    session_id: str,
+    doc_id: str,
+    status: DocStatus,
+    chunks: int | None = None,
+    error: str | None = None,
+    progress: int | None = None,
+    stage: str | None = None,
+) -> None:
     with _lock:
-        entry = _documents.get(doc_id)
-    if not entry or entry["session_id"] != session_id:
-        return None
-    return _to_info(entry)
+        e = _docs.get(session_id, {}).get(doc_id)
+        if not e:
+            return
+        e.info.status = status
+        if chunks is not None:
+            e.info.chunks = chunks
+        if error is not None:
+            e.info.error = error
+        if progress is not None:
+            e.info.progress = max(0, min(100, progress))
+        if stage is not None:
+            e.info.stage = stage
+        if status == DocStatus.READY:
+            e.info.progress, e.info.stage = 100, "done"
 
 
-def _to_info(entry: dict) -> DocumentInfo:
-    return DocumentInfo(**{k: v for k, v in entry.items() if k != "session_id"})
+def remove(session_id: str, doc_id: str) -> bool:
+    with _lock:
+        return _docs.get(session_id, {}).pop(doc_id, None) is not None
+
+
+def remove_session(session_id: str) -> None:
+    with _lock:
+        _docs.pop(session_id, None)
+
+
+def ready_doc_ids(session_id: str) -> set[str]:
+    with _lock:
+        return {
+            i
+            for i, e in _docs.get(session_id, {}).items()
+            if e.info.status == DocStatus.READY
+        }
+
+
+def inflight_bytes() -> int:
+    with _lock:
+        return sum(
+            e.info.size_bytes
+            for docs in _docs.values()
+            for e in docs.values()
+            if e.info.status in (DocStatus.QUEUED, DocStatus.PROCESSING)
+        )

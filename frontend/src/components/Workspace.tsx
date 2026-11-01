@@ -1,36 +1,36 @@
+import { type Key, type Lang, setLang, useI18n } from '../i18n'
 import { Icon } from './Icon'
-
-const QUESTION_HINTS: { label: string; question: string }[] = [
-  { 
-    label: 'data by year', 
-    question: 'Find data for 2023' 
-  },
-  { 
-    label: 'financial indicators', 
-    question: 'What revenue or profit is indicated?' 
-  },
-  { 
-    label: 'market shares', 
-    question: 'What market shares are indicated for companies?' 
-  }
-];
 
 interface WorkspaceProps {
   question: string
   isLoading: boolean
+  liveStep: string | null
   error: string | null
+  notice: string | null
   onQuestionChange: (value: string) => void
   onAsk: () => void
 }
 
-export function Workspace({ question, isLoading, error, onQuestionChange, onAsk }: WorkspaceProps) {
+export function Workspace({ question, isLoading, liveStep, error, notice, onQuestionChange, onAsk }: WorkspaceProps) {
+  const { t, lang } = useI18n()
+  const hints = [1, 2, 3].map((n) => ({
+    label: t(`hint${n}.label` as 'hint1.label'),
+    question: t(`hint${n}.q` as 'hint1.q'),
+  }))
   return (
     <main className="workspace">
       <header className="topbar">
         <div className="mobile-brand">DocMind</div>
         <div className="topbar-status">
           <span className="online-dot" />
-          AI READY
+          {t('status.online')}
+          <span className="lang-switch" role="group" aria-label="Language">
+            {(['ru', 'en'] as Lang[]).map((l) => (
+              <button key={l} className={l === lang ? 'lang-active' : ''} onClick={() => setLang(l)} aria-pressed={l === lang}>
+                {l.toUpperCase()}
+              </button>
+            ))}
+          </span>
         </div>
       </header>
 
@@ -38,21 +38,39 @@ export function Workspace({ question, isLoading, error, onQuestionChange, onAsk 
         <section className="hero">
           <div className="hero-copy">
             <div className="hero-eyebrow">
-              <Icon name="spark" size={14} />
-              AI DOCUMENT INTELLIGENCE
+              {t('hero.eyebrow')}
             </div>
 
             <h1>
-              Ask your
+              {t('hero.title1')}
               <br />
-              <span>documents.</span>
+              <span>{t('hero.title2')}</span>
             </h1>
 
-            <p>Upload documents, find the document you need, and get information on key questions</p>
+            <p>{t('hero.text')}</p>
           </div>
 
           <div className="hero-visual">
-            <div className="orb orb-large" />
+            <div className="lens" aria-hidden="true">
+              <svg viewBox="0 0 120 120" width="100%" height="100%" fill="none">
+                <defs>
+                  <linearGradient id="lens-ring" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stopColor="#3d2fa9" />
+                    <stop offset="1" stopColor="#2fb4e6" />
+                  </linearGradient>
+                  <radialGradient id="lens-glass" cx="35%" cy="30%" r="75%">
+                    <stop offset="0" stopColor="#ffffff" stopOpacity="0.85" />
+                    <stop offset="1" stopColor="#b7adff" stopOpacity="0.18" />
+                  </radialGradient>
+                </defs>
+                {/* ручка */}
+                <line x1="77" y1="77" x2="108" y2="108" stroke="url(#lens-ring)" strokeWidth="11" strokeLinecap="round" />
+                {/* стекло и оправа */}
+                <circle cx="50" cy="50" r="36" fill="url(#lens-glass)" stroke="url(#lens-ring)" strokeWidth="8" />
+                {/* блик */}
+                <path d="M30 40 A22 22 0 0 1 44 28" stroke="#fff" strokeWidth="5" strokeLinecap="round" opacity="0.9" />
+              </svg>
+            </div>
             <div className="orb orb-medium" />
             <div className="orb orb-small" />
             <div className="visual-grid" />
@@ -61,32 +79,32 @@ export function Workspace({ question, isLoading, error, onQuestionChange, onAsk 
 
         <section className="search-section">
           <div className="search-label">
-            <span>ASK AI</span>
+            <span>{t('search.label')}</span>
             <span className="shortcut">ENTER ↵</span>
           </div>
 
           <div className={`search-box ${isLoading ? 'search-box--loading' : ''}`}>
-            <Icon name="spark" size={20} />
-
             <input
               value={question}
               onChange={(e) => onQuestionChange(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') onAsk()
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing) onAsk()
               }}
-              placeholder="Enter a key question to search for a document"
+              placeholder={t('search.placeholder')}
+              aria-label={t('search.placeholder')}
+              maxLength={2000}
               disabled={isLoading}
             />
 
             <button className="ask-button" onClick={onAsk} disabled={isLoading || !question.trim()}>
-              {isLoading ? 'Searching...' : 'Ask AI'}
+              {isLoading ? t('search.loading') : t('search.button')}
               {!isLoading && <Icon name="arrow" size={16} />}
             </button>
           </div>
 
           <div className="search-hints">
-            <span>Например:</span>
-            {QUESTION_HINTS.map((hint) => (
+            <span>{t('search.hintsLabel')}</span>
+            {hints.map((hint) => (
               <button key={hint.label} onClick={() => onQuestionChange(hint.question)}>
                 {hint.label}
               </button>
@@ -96,13 +114,16 @@ export function Workspace({ question, isLoading, error, onQuestionChange, onAsk 
 
         <section className="results-section">
           {isLoading && (
-            <div className="loading-answer">
+            <div className="loading-answer" role="status" aria-live="polite">
+              <div className="live-step">{liveStep ? t(`step.${liveStep}` as Key) : t('search.loading')}…</div>
               <div className="loading-line loading-line--big" />
               <div className="loading-line" />
               <div className="loading-line loading-line--small" />
             </div>
           )}
         </section>
+
+        {notice && <div className="info-message">{notice}</div>}
 
         {error && (
           <div className="error-message">
@@ -113,9 +134,9 @@ export function Workspace({ question, isLoading, error, onQuestionChange, onAsk 
       </div>
 
       <footer className="workspace-footer">
-        <span>PRIVATE DOCUMENT SEARCH</span>
+        <span>{t('footer.private')}</span>
         <span>•</span>
-        <span>GROUNDED AI</span>
+        <span>{t('footer.grounded')}</span>
       </footer>
     </main>
   )

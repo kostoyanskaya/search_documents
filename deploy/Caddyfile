@@ -1,0 +1,29 @@
+# SITE_ADDRESS=docs.example.com -> automatic HTTPS. Default localhost for a local trial.
+{$SITE_ADDRESS:localhost} {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+		-Server
+	}
+
+	# API: no compression/buffering (the agent streams Server-Sent Events); /metrics is never exposed publicly.
+	handle /api/* {
+		request_body {
+			max_size 200MB
+		}
+		reverse_proxy backend:8000 {
+			flush_interval -1
+		}
+	}
+
+	handle {
+		encode zstd gzip
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}
